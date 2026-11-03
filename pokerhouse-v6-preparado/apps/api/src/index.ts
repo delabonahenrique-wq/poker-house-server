@@ -219,6 +219,16 @@ async function broadcastGame(game:TableState){
 }
 async function restoreGames(){
   try{
+    const tableCount = await prisma.pokerTable.count();
+    if(tableCount === 0){
+      await prisma.pokerTable.createMany({data:[
+        {name:'Mesa Iniciante',smallBlind:10,bigBlind:20,buyIn:500,maxPlayers:6,status:'WAITING'},
+        {name:'Mesa Clássica',smallBlind:25,bigBlind:50,buyIn:1500,maxPlayers:6,status:'WAITING'},
+        {name:'Mesa Desafio',smallBlind:50,bigBlind:100,buyIn:3000,maxPlayers:9,status:'WAITING'}
+      ]});
+      console.log('Created 3 demo poker tables');
+      io.to('lobby').emit('lobby:updated');
+    }
     const rows=await prisma.pokerGameSnapshot.findMany();
     for(const row of rows){
       const state=row.state as unknown as TableState;
