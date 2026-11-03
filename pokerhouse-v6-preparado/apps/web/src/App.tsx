@@ -1,0 +1,70 @@
+import {useEffect,useMemo,useState} from 'react';
+import type {FormEvent} from 'react';
+import {io,Socket} from 'socket.io-client';
+import {Spade,Coins,Trophy,Store,Package,UserRound,LogOut,Gift,Shield,RefreshCw,Users,Wifi,WifiOff} from 'lucide-react';
+import './style.css';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+type User = {id:string;username:string;email:string;balance:number;role?:string};
+type Table = {id:string;name:string;smallBlind:number;bigBlind:number;buyIn:number;maxPlayers:number};
+type Tournament = {id:string;name:string;entryChips:number;startsAt:string;maxPlayers:number};
+const money=(n:number)=>new Intl.NumberFormat('pt-BR').format(n);
+export default function App(){
+ const [token,setToken]=useState(localStorage.getItem('ph_token')||'');
+ const [user,setUser]=useState<User|null>(null),[tab,setTab]=useState('lobby'),[mode,setMode]=useState<'login'|'register'>('login');
+ const [login,setLogin]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState('');
+ const [tables,setTables]=useState<Table[]>([]),[tournaments,setTournaments]=useState<Tournament[]>([]);
+ const [history,setHistory]=useState<any[]>([]),[storeItems,setStoreItems]=useState<any[]>([]),[inventory,setInventory]=useState<any[]>([]),[status,setStatus]=useState('Conectando'),[notice,setNotice]=useState('');
+ const [busy,setBusy]=useState(false),[admin,setAdmin]=useState<any>(null);
+ const [activeTable,setActiveTable]=useState<any>(null),[turn,setTurn]=useState<any>(null),[tableError,setTableError]=useState('');
+ const headers=useMemo(()=>({'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})}),[token]);
+ async function api(path:string,options:RequestInit={}){const r=await fetch(API+path,{...options,headers:{...headers,...options.headers}});const d=await r.json();if(!r.ok)throw new Error(d.error||'Erro na solicitação');return d;}
+ async function load(){
+  try{const [me,lobby,hist,store,inv]=await Promise.all([api('/api/me'),api('/api/lobby'),api('/api/wallet/history'),api('/api/store/items'),api('/api/inventory')]);setUser(me.user);setTables(lobby.tables);setTournaments(lobby.tournaments);setHistory(hist.transactions);setStoreItems(store.items);setInventory(inv.items);}
+  catch(e:any){setNotice(e.message);logout(false);}
+ }
+ function logout(clear=true){if(clear){localStorage.removeItem('ph_token');setToken('');}setUser(null);}
+ useEffect(()=>{if(token)load();},[token]);
+ useEffect(()=>{if(!token)return;const s:Socket=io(API,{auth:{token}});
+  s.on('connect',()=>setStatus('Servidor conectado'));s.on('disconnect',()=>setStatus('Reconectando'));s.on('connect_error',()=>setStatus('Servidor indisponível'));
+  s.on('table:state',(state:any)=>setActiveTable(state));
+  s.on('table:private-cards',(v:any)=>setActiveTable((old:any)=>old?({...old,players:old.players.map((p:any)=>p.id===user?.id?({...p,hole:v.cards}):p)}):old));
+  s.on('table:turn',(v:any)=>setTurn(v));s.on('table:hand-complete',()=>setTurn(null));
+  s.on('table:error',(v:any)=>setTableError(v.message));s.on('table:left',()=>{setActiveTable(null);setTurn(null);load();});
+  (window as any).__phSocket=s;s.emit('lobby:subscribe');
+  return()=>{(window as any).__phSocket=null;s.disconnect()};
+ },[token,user?.id]);
+ async function submitAuth(e:FormEvent){e.preventDefault();setBusy(true);setNotice('');try{const d=await api(mode==='register'?'/api/auth/register':'/api/auth/login',{method:'POST',body:JSON.stringify(mode==='register'?{email,username:login,password}:{login,password})});localStorage.setItem('ph_token',d.token);setToken(d.token);setUser(d.user);}catch(e:any){setNotice(e.message);}finally{setBusy(false);}}
+ async function action(path:string,body:any={}){setBusy(true);setNotice('');try{const d=await api(path,{method:'POST',body:JSON.stringify(body)});setNotice(d.message||'Operação concluída.');await load();}catch(e:any){setNotice(e.message);}finally{setBusy(false);}}
+ function openTable(tableId:string){setTableError('');setTurn(null);setActiveTable({id:tableId,connecting:true});(window as any).__phSocket?.emit('table:join',tableId);}
+ function tableAction(actionName:string,amount=0){(window as any).__phSocket?.emit('table:action',{tableId:activeTable?.id,action:actionName,amount});}
+ function leaveTable(){(window as any).__phSocket?.emit('table:leave',activeTable?.id);}
+ async function daily(){await action('/api/rewards/claim');}
+ async function adminLoad(){try{setAdmin(await api('/api/admin/overview'));}catch(e:any){setNotice(e.message);}}
+ if(!token||!user)return <div className="auth-page"><div className="auth-card"><div className="brand"><Spade/> POKER <b>HOUSE</b></div><p className="eyebrow">CLUBE • ESTRATÉGIA • COMUNIDADE</p><h1>{mode==='login'?'Entre para o jogo':'Crie sua conta'}</h1><p className="muted">Uma experiência de poker com fichas exclusivamente fictícias.</p><form onSubmit={submitAuth}>{mode==='register'&&<input required type="email" placeholder="Seu e-mail" value={email} onChange={e=>setEmail(e.target.value)}/>}<input required placeholder={mode==='register'?'Nome de usuário':'E-mail ou usuário'} value={login} onChange={e=>setLogin(e.target.value)}/><input required type="password" minLength={mode==='register'?8:1} placeholder="Senha" value={password} onChange={e=>setPassword(e.target.value)}/><button disabled={busy}>{busy?'Aguarde...':mode==='login'?'Entrar':'Criar conta'}</button></form>{notice&&<p className="notice">{notice}</p>}<button className="link-btn" onClick={()=>{setMode(mode==='login'?'register':'login');setNotice('')}}>{mode==='login'?'Ainda não tem conta? Criar cadastro':'Já tem conta? Entrar'}</button><small className="legal">As fichas não têm valor monetário, não podem ser sacadas nem transferidas.</small></div></div>;
+ const nav=[['lobby','Mesas',Spade],['tournaments','Torneios',Trophy],['wallet','Carteira',Coins],['store','Loja',Store],['inventory','Coleção',Package],['profile','Perfil',UserRound]];
+ return <div className="app-shell"><aside className="sidebar"><div className="brand"><Spade/> POKER <b>HOUSE</b></div><div className="side-label">MENU PRINCIPAL</div>{nav.map(([id,label,Icon]:any)=><button key={id} className={tab===id?'nav active':'nav'} onClick={()=>setTab(id)}><Icon size={18}/>{label}</button>)}{user.role==='ADMIN'&&<button className="nav" onClick={()=>{setTab('admin');adminLoad()}}><Shield size={18}/>Administração</button>}<div className="side-bottom"><div className="online"><span/> {status}</div><button className="nav" onClick={()=>logout()}><LogOut size={18}/>Sair</button></div></aside>
+ <main className="main"><header className="topbar"><div><span className="eyebrow">BEM-VINDO AO CLUBE</span><h2>Olá, {user.username}</h2></div><div className="balance"><Coins/><div><small>SALDO FICTÍCIO</small><b>{money(user.balance)} fichas</b></div></div></header>
+ {notice&&<div className="notice-banner">{notice}<button onClick={()=>setNotice('')}>×</button></div>}
+ {tab==='lobby'&&<><section className="hero"><div><span className="eyebrow">POKER HOUSE • SEU PRÓXIMO JOGO</span><h1>Jogue pela<br/><i>estratégia.</i></h1><p>Encontre sua mesa, evolua sua coleção e participe da comunidade.</p><button onClick={()=>setTab('tournaments')}>Explorar torneios</button></div><div className="hero-art">♠<span>♥</span><small>FICHAS VIRTUAIS</small></div></section><div className="section-head"><div><span className="eyebrow">POKER HOUSE LOBBY</span><h2>Mesas disponíveis</h2></div><button className="ghost" onClick={load}><RefreshCw size={16}/> Atualizar</button></div><div className="cards">{tables.map(t=><article className="game-card" key={t.id}><div className="card-top"><span className="pill">CASH GAME</span><Users size={18}/></div><h3>{t.name}</h3><p>Blinds {t.smallBlind}/{t.bigBlind} · até {t.maxPlayers} jogadores</p><div className="card-foot"><b>{money(t.buyIn)} fichas</b><button disabled={busy} onClick={()=>openTable(t.id)}>Entrar</button></div></article>)}{!tables.length&&<article className="empty"><Spade/><h3>As mesas estão sendo preparadas</h3><p>Volte em instantes para conferir o lobby.</p></article>}</div></>}
+ {activeTable&&tab==='lobby'&&<section className="table-screen">
+ <div className="section-head"><div><span className="eyebrow">MESA AO VIVO</span><h2>{activeTable.name||'Conectando à mesa'}</h2></div><button className="ghost" onClick={leaveTable}>Sair da mesa</button></div>
+ {tableError&&<div className="notice-banner">{tableError}<button onClick={()=>setTableError('')}>×</button></div>}
+ {activeTable.connecting?<div className="empty">Conectando e reservando seu assento...</div>:<>
+ <div className="poker-table"><div className="table-title">POKER HOUSE <small>{activeTable.street} · MÃO #{activeTable.handNumber}</small></div>
+  <div className="community">{(activeTable.board||[]).map((c:any,i:number)=><div className={`playing-card ${c.suit==='♥'||c.suit==='♦'?'red':''}`} key={i}><b>{c.rank===14?'A':c.rank===13?'K':c.rank===12?'Q':c.rank===11?'J':c.rank}</b><span>{c.suit}</span></div>)}{Array.from({length:5-(activeTable.board||[]).length}).map((_,i)=><div className="card-back" key={`back${i}`}>♠</div>)}</div>
+  <div className="pot-label">POTE <b>{money(activeTable.pot||0)}</b></div>
+  <div className="seat-grid">{(activeTable.players||[]).map((p:any)=><div className={`seat ${p.id===user.id?'mine':''} ${p.folded?'folded':''}`} key={p.id}><b>{p.username}</b><span>{money(p.stack)} fichas</span>{p.id===user.id&&<small>VOCÊ</small>}{p.id===activeTable.players.find((x:any)=>x.seat===activeTable.currentSeat)?.id&&<em>VEZ DE JOGAR</em>}{p.hole&&<div className="hole-cards">{p.hole.map((c:any,i:number)=><div className={`playing-card mini ${c.suit==='♥'||c.suit==='♦'?'red':''}`} key={i}>{c.rank===14?'A':c.rank===13?'K':c.rank===12?'Q':c.rank===11?'J':c.rank}{c.suit}</div>)}</div>}</div>)}</div>
+ </div>
+ <div className="table-controls"><p>{activeTable.street==='COMPLETE'?'Mão encerrada.':turn?.playerId===user.id?'É sua vez de agir.':`Aguardando ${activeTable.players?.find((p:any)=>p.seat===activeTable.currentSeat)?.username||'jogador'}...`}</p>
+ {turn?.playerId===user.id&&<div className="action-buttons">{turn.actions.map((a:any)=><button key={a.action} onClick={()=>tableAction(a.action,a.action==='BET'||a.action==='RAISE'?Math.min(turn.maxAmount,turn.toCall+turn.minRaise):0)}>{a.action==='ALL_IN'?'ALL-IN':a.action==='FOLD'?'Desistir':a.action==='CHECK'?'Mesa':a.action==='CALL'?`Pagar ${money(turn.toCall)}`:a.action==='BET'?'Apostar mínimo':'Aumentar mínimo'}</button>)}</div>}
+ </div></>}
+ </section>}
+ {tab==='tournaments'&&<><div className="section-head"><div><span className="eyebrow">COMPETIÇÃO</span><h2>Próximos torneios</h2></div></div><div className="cards">{tournaments.map(t=><article className="game-card" key={t.id}><span className="pill gold">TORNEIO</span><h3>{t.name}</h3><p>Início: {new Date(t.startsAt).toLocaleString('pt-BR')}</p><div className="card-foot"><b>{money(t.entryChips)} fichas</b><button onClick={()=>action(`/api/tournaments/${t.id}/register`)}>Inscrever-se</button></div></article>)}{!tournaments.length&&<article className="empty"><Trophy/><h3>Nenhum torneio agendado</h3><p>Novos eventos serão anunciados aqui.</p></article>}</div></>}
+ {tab==='wallet'&&<><div className="section-head"><div><span className="eyebrow">SUA CONTA</span><h2>Carteira virtual</h2></div><button onClick={daily}><Gift size={16}/> Resgatar recompensa diária</button></div><article className="wallet-card"><small>SALDO DISPONÍVEL</small><h1>{money(user.balance)} <span>fichas</span></h1><p>Moedas de jogo sem valor monetário e sem possibilidade de saque.</p></article><h3>Movimentações</h3>{history.map(x=><div className="history" key={x.id}><span>{x.description}</span><b className={x.amount<0?'negative':'positive'}>{x.amount>0?'+':''}{money(x.amount)}</b></div>)}</>}
+ {tab==='store'&&<><div className="section-head"><div><span className="eyebrow">ITENS COSMÉTICOS</span><h2>Loja do clube</h2></div></div><div className="cards">{storeItems.map(item=><article className="game-card item" key={item.id}><div className="item-art">✦</div><span className="pill gold">{item.rarity}</span><h3>{item.name}</h3><p>{item.description}</p><div className="card-foot"><b>{money(item.priceChips)} fichas</b><button disabled={busy} onClick={()=>action(`/api/store/items/${item.id}/buy`)}>Comprar</button></div></article>)}</div></>}
+  {tab==='inventory'&&<><div className="section-head"><div><span className="eyebrow">ITENS ADQUIRIDOS</span><h2>Sua coleção</h2></div></div><div className="cards">{inventory.map((entry:any)=><article className="game-card" key={entry.id}><div className="item-art">✦</div><span className="pill gold">{entry.item.rarity}</span><h3>{entry.item.name}</h3><p>{entry.item.description}</p></article>)}{!inventory.length&&<article className="empty"><Package/><h3>Sua coleção começa aqui</h3><p>Adquira itens na loja para vê-los aqui.</p></article>}</div></>}
+ {tab==='profile'&&<article className="profile-card"><UserRound/><h2>{user.username}</h2><p>{user.email}</p><span className="pill">MEMBRO DO CLUBE</span><p>Conta criada: {new Date((user as any).createdAt||Date.now()).toLocaleDateString('pt-BR')}</p></article>}
+ {tab==='admin'&&<><div className="section-head"><div><span className="eyebrow">CONTROLE DO SISTEMA</span><h2>Painel administrativo</h2></div><button className="ghost" onClick={adminLoad}>Atualizar</button></div>{admin?<div className="cards">{[['Jogadores',admin.users],['Mesas',admin.tables],['Torneios',admin.tournaments]].map(([k,v])=><article className="game-card" key={k as string}><span className="eyebrow">{k}</span><h1>{v}</h1></article>)}</div>:<p>Carregando dados administrativos...</p>}</>}
+ <footer>© Poker House · Ambiente de entretenimento com fichas fictícias · Sem dinheiro real</footer></main></div>
+}

@@ -1,0 +1,21 @@
+{
+  "name": "poker-house-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace @poker-house/api\" \"npm run dev --workspace @poker-house/web\"",
+    "build": "npm run build --workspace @poker-house/web && npm run build --workspace @poker-house/api",
+    "start": "npm run start --workspace @poker-house/api",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prisma": "^6.4.1",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.3"
+  }
+}

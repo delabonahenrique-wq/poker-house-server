@@ -1,0 +1,91 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+enum UserStatus { ACTIVE SUSPENDED }
+enum DemoTransactionType { GRANT_DEMO DAILY_REWARD TABLE_BUY_IN TABLE_CASH_OUT TOURNAMENT_ENTRY TOURNAMENT_PRIZE ADJUSTMENT }
+enum UserRole { PLAYER ADMIN }
+model User {
+ id String @id @default(cuid())
+ email String @unique
+ username String @unique
+ passwordHash String
+ role UserRole @default(PLAYER)
+ status UserStatus @default(ACTIVE)
+ createdAt DateTime @default(now())
+ wallet DemoWallet?
+ transactions DemoChipTransaction[]
+ registrations TournamentRegistration[]
+}
+model DemoWallet {
+ id String @id @default(cuid())
+ userId String @unique
+ balance BigInt @default(10000)
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+}
+model DemoChipTransaction {
+ id String @id @default(cuid())
+ userId String
+ type DemoTransactionType
+ amount BigInt
+ referenceId String?
+ description String
+ createdAt DateTime @default(now())
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ @@index([userId, createdAt])
+}
+model PokerTable {
+ id String @id @default(cuid())
+ name String
+ smallBlind Int @default(10)
+ bigBlind Int @default(20)
+ buyIn Int @default(500)
+ maxPlayers Int @default(6)
+ status String @default("WAITING")
+ createdAt DateTime @default(now())
+}
+model Tournament {
+ id String @id @default(cuid())
+ name String
+ entryChips Int @default(0)
+ maxPlayers Int @default(18)
+ startsAt DateTime
+ status String @default("SCHEDULED")
+ registrations TournamentRegistration[]
+}
+model TournamentRegistration {
+ id String @id @default(cuid())
+ userId String
+ tournamentId String
+ createdAt DateTime @default(now())
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ tournament Tournament @relation(fields:[tournamentId],references:[id],onDelete:Cascade)
+ @@unique([userId,tournamentId])
+}
+
+
+model StoreItem {
+ id String @id @default(cuid())
+ name String
+ description String
+ rarity String
+ priceChips Int
+ imageKey String @default("sparkle")
+ active Boolean @default(true)
+ createdAt DateTime @default(now())
+ inventory InventoryItem[]
+}
+model InventoryItem {
+ id String @id @default(cuid())
+ userId String
+ itemId String
+ acquiredAt DateTime @default(now())
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ item StoreItem @relation(fields:[itemId],references:[id],onDelete:Cascade)
+ @@unique([userId,itemId])
+}
+
+model PokerGameSnapshot {
+ id String @id @default(cuid())
+ tableId String @unique
+ state Json
+ updatedAt DateTime @updatedAt
+}

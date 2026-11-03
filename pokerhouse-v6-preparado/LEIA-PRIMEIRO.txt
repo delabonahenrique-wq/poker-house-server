@@ -1,0 +1,12 @@
+POKER HOUSE - VERSAO V6 PREPARADA
+
+1) Extraia toda esta pasta para um local normal do Windows.
+2) De dois cliques em INSTALAR_POKER_HOUSE.bat.
+3) Aguarde a instalacao terminar. Nao feche a janela.
+4) Se aparecer erro, fotografe a janela inteira e envie no ChatGPT.
+
+REQUISITOS: Windows 10/11, Node.js LTS e internet.
+
+IMPORTANTE: a instalacao de dependencias nao inicia o servidor. Ainda falta
+configurar PostgreSQL e o arquivo .env. O README.md tem os detalhes tecnicos.
+A versao atual usa somente fichas virtuais sem saque ou valor em dinheiro.

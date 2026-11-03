@@ -1,0 +1,18 @@
+POKER HOUSE — COMPILAÇÃO AUTOMÁTICA DO APK
+
+Este projeto inclui o workflow .github/workflows/android-apk.yml.
+Ele compila o app Android em um runner do GitHub Actions e publica o APK como artefato para baixar.
+
+REQUISITO OBRIGATÓRIO ANTES DA COMPILAÇÃO:
+1. O backend/API precisa estar implantado e acessível por HTTPS.
+2. No GitHub, no repositório do projeto, abra Settings > Secrets and variables > Actions > New repository secret.
+3. Crie o secret com o nome VITE_API_URL e valor igual à URL HTTPS pública da API (por exemplo, https://api.seudominio.com). Não use localhost.
+4. Envie estes arquivos para o repositório GitHub e execute Actions > Build Poker House Android APK > Run workflow.
+5. Quando terminar com sucesso, baixe o artefato Poker-House-Android-APK na execução do workflow e extraia o APK.
+
+LIMITES:
+- O workflow ainda não foi executado nesta sessão.
+- Nenhum APK foi gerado ou testado em aparelho.
+- O backend deve estar implantado e configurado com CORS, banco PostgreSQL e variáveis de ambiente.
+- Este é um APK debug para testes; distribuição pública exige assinatura release, política de privacidade, revisão de segurança e testes.
+- O app usa somente fichas virtuais sem valor monetário.
