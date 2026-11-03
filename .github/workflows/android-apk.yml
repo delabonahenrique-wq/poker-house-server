@@ -1,0 +1,61 @@
+name: Build Poker House Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "pokerhouse-v6-preparado/**"
+      - ".github/workflows/android-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pokerhouse-v6-preparado
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pokerhouse-v6-preparado/package.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build --workspace @poker-house/web
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync Android
+        run: npx cap sync android
+        working-directory: pokerhouse-v6-preparado/apps/web
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+        working-directory: pokerhouse-v6-preparado/apps/web/android
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Poker-House-Android-APK
+          path: pokerhouse-v6-preparado/apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
