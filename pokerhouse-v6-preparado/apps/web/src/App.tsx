@@ -4,7 +4,7 @@ import {io,Socket} from 'socket.io-client';
 import {Spade,Coins,Trophy,Store,Package,UserRound,LogOut,Gift,Shield,RefreshCw,Users,Wifi,WifiOff} from 'lucide-react';
 import './style.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API = (import.meta.env.VITE_API_URL || 'https://poker-house-api.onrender.com').replace(/\/+$/, '');
 type User = {id:string;username:string;email:string;balance:number;role?:string};
 type Table = {id:string;name:string;smallBlind:number;bigBlind:number;buyIn:number;maxPlayers:number};
 type Tournament = {id:string;name:string;entryChips:number;startsAt:string;maxPlayers:number};
