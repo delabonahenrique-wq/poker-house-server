@@ -16,12 +16,12 @@ const prisma = new PrismaClient();
 const origins = (process.env.CLIENT_ORIGIN ?? 'http://localhost:5173').split(',').map(x => x.trim());
 const secret = process.env.JWT_SECRET ?? 'DEV_ONLY_CHANGE_THIS_SECRET_BEFORE_DEPLOY';
 app.use(helmet());
-app.use(cors({ origin: origins }));
+app.use(cors({ origin: true }));
 app.use(express.json({ limit: '20kb' }));
 
 type AuthRequest = Request & { userId?: string };
 function auth(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = req.headers.authorization?.replace(/^Bearer\\s+/i, '');
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'Faça login para continuar.' });
   try {
     const data = jwt.verify(token, secret) as { sub: string };
