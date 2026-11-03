@@ -38,7 +38,7 @@ jobs:
         run: npm run build --workspace @poker-house/web
         working-directory: pokerhouse-v6-preparado
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: https://poker-house-api.onrender.com
 
       - name: Add Android platform
         run: npx cap add android
