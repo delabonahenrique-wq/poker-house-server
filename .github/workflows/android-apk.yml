@@ -13,9 +13,6 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: pokerhouse-v6-preparado
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,21 +25,24 @@ jobs:
           cache-dependency-path: pokerhouse-v6-preparado/package.json
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Install dependencies
         run: npm install
+        working-directory: pokerhouse-v6-preparado
 
       - name: Build web app
         run: npm run build --workspace @poker-house/web
+        working-directory: pokerhouse-v6-preparado
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Add Android platform
         run: npx cap add android
+        working-directory: pokerhouse-v6-preparado/apps/web
 
       - name: Sync Android
         run: npx cap sync android
