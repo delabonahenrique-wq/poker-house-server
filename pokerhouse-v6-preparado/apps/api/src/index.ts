@@ -80,6 +80,28 @@ app.post('/api/rewards/claim', auth, async (req:AuthRequest,res) => {
   res.json({balance:Number(result?.balance ?? 0),message:'500 fichas fictícias adicionadas.'});
 });
 
+
+
+// Academy content is available only to entitled users. Payments remain disabled until
+// a legally approved payment provider with authenticated webhook is integrated.
+const ACADEMY_SLUG = 'poker-house-iniciante';
+app.get('/api/academy', auth, async (req:AuthRequest,res) => {
+  const course=await prisma.course.findUnique({where:{slug:ACADEMY_SLUG},include:{modules:{orderBy:{position:'asc'},include:{lessons:{orderBy:{position:'asc'}}}}}});
+  if(!course || !course.published) return res.json({course:null,unlocked:false,paymentEnabled:false});
+  const entitlement=await prisma.courseEntitlement.findUnique({where:{userId_courseId:{userId:req.userId!,courseId:course.id}}});
+  const unlocked=!!entitlement;
+  const progress=unlocked?await prisma.courseProgress.findMany({where:{userId:req.userId!,lesson:{module:{courseId:course.id}}},select:{lessonId:true}}):[];
+  res.json({course:{id:course.id,title:course.title,description:course.description,modules:course.modules.map(m=>({id:m.id,title:m.title,lessons:m.lessons.map(l=>({id:l.id,title:l.title,...(unlocked?{pdfUrl:l.pdfUrl,videoUrl:l.videoUrl}: {})}))}))},unlocked,completedLessonIds:progress.map(x=>x.lessonId),paymentEnabled:false,minimumPaymentCents:1000});
+});
+app.post('/api/academy/lessons/:id/complete', auth, async (req:AuthRequest,res) => {
+  const lesson=await prisma.courseLesson.findUnique({where:{id:req.params.id},include:{module:true}});
+  if(!lesson) return res.status(404).json({error:'Aula não encontrada.'});
+  const entitlement=await prisma.courseEntitlement.findUnique({where:{userId_courseId:{userId:req.userId!,courseId:lesson.module.courseId}}});
+  if(!entitlement) return res.status(403).json({error:'Curso ainda não liberado.'});
+  await prisma.courseProgress.upsert({where:{userId_lessonId:{userId:req.userId!,lessonId:lesson.id}},create:{userId:req.userId!,lessonId:lesson.id},update:{}});
+  res.json({message:'Aula concluída.'});
+});
+
 app.get('/api/lobby', async (_req,res) => {
   const [tables,tournaments] = await Promise.all([
     prisma.pokerTable.findMany({where:{status:'WAITING'},orderBy:{createdAt:'asc'}}),
@@ -219,6 +241,7 @@ async function broadcastGame(game:TableState){
 }
 async function restoreGames(){
   try{
+    await prisma.course.upsert({where:{slug:ACADEMY_SLUG},create:{slug:ACADEMY_SLUG,title:'Poker House Academy — Poker do Zero',description:'Aprenda Texas Hold’em com PDF e videoaulas. Conteúdo em preparação.',published:true},update:{}});
     const tableCount = await prisma.pokerTable.count();
     if(tableCount === 0){
       await prisma.pokerTable.createMany({data:[
