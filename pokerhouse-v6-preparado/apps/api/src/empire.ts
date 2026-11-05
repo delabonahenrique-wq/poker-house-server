@@ -17,7 +17,7 @@ export function registerEmpireRoutes(app: any, prisma: PrismaClient, auth: Reque
     const ledger = await prisma.empireLedger.findMany({
       where: { userId }, orderBy: { createdAt: 'desc' }, take: 25
     });
-    res.json({ wallet: { balance: Number(wallet.balance) }, casinos, ledger: ledger.map(x => ({ ...x, amount: Number(x.amount) })), currency: 'Moedas do Império — fictícias' });
+    res.json(JSON.parse(JSON.stringify({ wallet: { balance: Number(wallet.balance) }, casinos, ledger, currency: 'Moedas do Império — fictícias' }, (_key, value) => typeof value === 'bigint' ? Number(value) : value)));
   });
 
   router.post('/casinos', async (req: any, res) => {
