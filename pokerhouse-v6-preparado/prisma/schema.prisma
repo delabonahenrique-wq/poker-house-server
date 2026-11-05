@@ -288,6 +288,7 @@ model EmpireAsset {
   createdAt   DateTime @default(now())
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   casino      Casino?  @relation(fields: [casinoId], references: [id], onDelete: SetNull)
+  marketListing MarketListing?
   @@index([ownerId, kind])
 }
 
@@ -299,5 +300,6 @@ model MarketListing {
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  asset       EmpireAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
   @@index([status, createdAt])
 }
