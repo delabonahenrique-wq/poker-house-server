@@ -27,17 +27,17 @@ export default function App(){
  function logout(clear=true){if(clear){localStorage.removeItem('ph_token');setToken('');}setUser(null);}
  useEffect(()=>{if(token)load();},[token]);
  useEffect(()=>{if(!token)return;const s:Socket=io(API,{auth:{token}});
-  s.on('connect',()=>setStatus('Servidor conectado'));s.on('disconnect',()=>setStatus('Reconectando'));s.on('connect_error',()=>setStatus('Servidor indisponível'));
+  s.on('connect',()=>setStatus('Servidor conectado'));s.on('disconnect',()=>{setStatus('Reconectando');setActiveTable((old:any)=>old?.connecting?null:old);});s.on('connect_error',(err:any)=>{setStatus('Servidor indisponível');setActiveTable((old:any)=>old?.connecting?null:old);setNotice('Não foi possível conectar ao servidor de jogo. Verifique sua conexão e tente novamente.');});
   s.on('table:state',(state:any)=>setActiveTable(state));
   s.on('table:private-cards',(v:any)=>setActiveTable((old:any)=>old?({...old,players:old.players.map((p:any)=>p.id===user?.id?({...p,hole:v.cards}):p)}):old));
   s.on('table:turn',(v:any)=>setTurn(v));s.on('table:hand-complete',()=>setTurn(null));
-  s.on('table:error',(v:any)=>setTableError(v.message));s.on('table:left',()=>{setActiveTable(null);setTurn(null);load();});
+  s.on('table:error',(v:any)=>{setTableError(v.message||'Não foi possível entrar na mesa.');setActiveTable((old:any)=>old?.connecting?null:old);setNotice(v.message||'Não foi possível entrar na mesa.');});s.on('table:left',()=>{setActiveTable(null);setTurn(null);load();});
   (window as any).__phSocket=s;s.emit('lobby:subscribe');
   return()=>{(window as any).__phSocket=null;s.disconnect()};
  },[token,user?.id]);
  async function submitAuth(e:FormEvent){e.preventDefault();setBusy(true);setNotice('');try{const d=await api(mode==='register'?'/api/auth/register':'/api/auth/login',{method:'POST',body:JSON.stringify(mode==='register'?{email,username:login,password}:{login,password})});localStorage.setItem('ph_token',d.token);setToken(d.token);setUser(d.user);}catch(e:any){setNotice(e.message);}finally{setBusy(false);}}
  async function action(path:string,body:any={}){setBusy(true);setNotice('');try{const d=await api(path,{method:'POST',body:JSON.stringify(body)});setNotice(d.message||'Operação concluída.');await load();}catch(e:any){setNotice(e.message);}finally{setBusy(false);}}
- function openTable(tableId:string){setTableError('');setTurn(null);setActiveTable({id:tableId,connecting:true});(window as any).__phSocket?.emit('table:join',tableId);}
+ function openTable(tableId:string){const socket:Socket|undefined=(window as any).__phSocket;setTableError('');setTurn(null);if(!socket?.connected){setNotice('Conexão com o servidor ainda não está pronta. Aguarde alguns segundos e tente novamente.');return;}setActiveTable({id:tableId,connecting:true});socket.emit('table:join',tableId);window.setTimeout(()=>{setActiveTable((old:any)=>{if(old?.id===tableId&&old.connecting){setNotice('O servidor não respondeu à entrada na mesa. Tente novamente.');return null;}return old;});},15000);}
  function tableAction(actionName:string,amount=0){(window as any).__phSocket?.emit('table:action',{tableId:activeTable?.id,action:actionName,amount});}
  function leaveTable(){(window as any).__phSocket?.emit('table:leave',activeTable?.id);}
  async function loadAcademy(){try{setAcademy(await api('/api/academy'));}catch(e:any){setNotice(e.message);}}
