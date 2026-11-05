@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import {createTable,sitDown,startHand,act,leaveTable,publicState,legalActions,TableState,ActionType} from './poker/engine.js';
+import { registerEmpireRoutes, awardEmpireHand } from './empire.js';
 
 const app = express();
 const server = createServer(app);
@@ -29,6 +30,7 @@ function auth(req: AuthRequest, res: Response, next: NextFunction) {
     next();
   } catch { return res.status(401).json({ error: 'Sessão inválida. Entre novamente.' }); }
 }
+registerEmpireRoutes(app, prisma, auth as any);
 const safeUser = (u: any) => ({ id: u.id, username: u.username, email: u.email, status: u.status, role: u.role, balance: Number(u.wallet?.balance ?? 0), createdAt: u.createdAt });
 const sign = (id: string) => jwt.sign({ sub: id }, secret, { expiresIn: '7d' });
 
@@ -323,6 +325,7 @@ io.on('connection',socket=>{
     try{
       const game=liveTables.get(tableId);if(!game)throw new Error('Mesa não encontrada.');
       const state=act(game,socket.data.userId,action,amount||0);
+      if(game.street==='COMPLETE' && game.winners.length) await awardEmpireHand(prisma,game.id,game.handNumber,game.winners);
       await persistGame(game);
       await broadcastGame(game);
       if(game.currentSeat!==null){
