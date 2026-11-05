@@ -56,8 +56,8 @@ export function registerEmpireExtraRoutes(app: any, prisma: PrismaClient, auth: 
   });
 
   r.get('/market/listings', async (_req, res) => {
-    const listings = await prisma.marketListing.findMany({ where: { status: 'ACTIVE' }, include: { owner: { select: { username: true } } }, orderBy: { createdAt: 'desc' }, take: 50 });
-    res.json({ listings: listings.map((x: any) => ({ id: x.id, assetId: x.assetId, price: Number(x.price), seller: x.owner.username, createdAt: x.createdAt })) });
+    const listings = await prisma.marketListing.findMany({ where: { status: 'ACTIVE' }, include: { owner: { select: { username: true } }, asset: true }, orderBy: { createdAt: 'desc' }, take: 50 });
+    res.json({ listings: listings.map((x: any) => ({ id: x.id, assetId: x.assetId, price: Number(x.price), seller: x.owner.username, asset: x.asset.name, createdAt: x.createdAt })) });
   });
 
   r.post('/market/listings', async (req: any, res) => {
@@ -67,8 +67,10 @@ export function registerEmpireExtraRoutes(app: any, prisma: PrismaClient, auth: 
     const asset = await prisma.empireAsset.findFirst({ where: { id: parsed.data.assetId, ownerId: userId } });
     if (!asset) return res.status(404).json({ error: 'Ativo não encontrado.' });
     const existing = await prisma.marketListing.findUnique({ where: { assetId: asset.id } });
-    if (existing) return res.status(409).json({ error: 'Este ativo já foi anunciado.' });
-    const listing = await prisma.marketListing.create({ data: { ownerId: userId, assetId: asset.id, price: BigInt(parsed.data.price) } });
+    if (existing?.status === 'ACTIVE') return res.status(409).json({ error: 'Este ativo já foi anunciado.' });
+    const listing = existing
+      ? await prisma.marketListing.update({ where: { id: existing.id }, data: { ownerId: userId, price: BigInt(parsed.data.price), status: 'ACTIVE' } })
+      : await prisma.marketListing.create({ data: { ownerId: userId, assetId: asset.id, price: BigInt(parsed.data.price) } });
     res.status(201).json({ listing: { id: listing.id, price: Number(listing.price) }, message: 'Anúncio publicado.' });
   });
 
