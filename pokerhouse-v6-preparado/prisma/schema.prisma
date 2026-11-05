@@ -253,6 +253,9 @@ model Casino {
   secondaryColor String @default("#171717")
   reputation  Int      @default(50)
   level       Int      @default(1)
+  totalVisitors Int    @default(0)
+  reviewAverage Float  @default(0)
+  reviewCount Int      @default(0)
   monthlyRevenue BigInt @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
