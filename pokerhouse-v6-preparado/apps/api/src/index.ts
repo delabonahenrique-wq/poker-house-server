@@ -10,6 +10,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import {createTable,sitDown,startHand,act,leaveTable,publicState,legalActions,TableState,ActionType} from './poker/engine.js';
 import { registerEmpireRoutes, awardEmpireHand } from './empire.js';
+import { registerEmpireExtraRoutes } from './empire-extra.js';
 
 const app = express();
 const server = createServer(app);
@@ -31,6 +32,7 @@ function auth(req: AuthRequest, res: Response, next: NextFunction) {
   } catch { return res.status(401).json({ error: 'Sessão inválida. Entre novamente.' }); }
 }
 registerEmpireRoutes(app, prisma, auth as any);
+registerEmpireExtraRoutes(app, prisma, auth as any);
 const safeUser = (u: any) => ({ id: u.id, username: u.username, email: u.email, status: u.status, role: u.role, balance: Number(u.wallet?.balance ?? 0), createdAt: u.createdAt });
 const sign = (id: string) => jwt.sign({ sub: id }, secret, { expiresIn: '7d' });
 
