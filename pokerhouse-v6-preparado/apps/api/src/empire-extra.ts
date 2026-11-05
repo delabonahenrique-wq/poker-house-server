@@ -104,5 +104,31 @@ export function registerEmpireExtraRoutes(app: any, prisma: PrismaClient, auth: 
     res.json({ rankings: casinos.map((c: any, i: number) => ({ position: i + 1, casino: c.name, owner: c.owner.username, reputation: c.reputation, level: c.level })) });
   });
 
+
+  r.get('/casinos/:id/public', async (req: any, res) => {
+    const casino = await prisma.casino.findUnique({ where: { id: req.params.id }, include: { owner: { select: { username: true } }, staff: true, assets: true } });
+    if (!casino) return res.status(404).json({ error: 'Cassino não encontrado.' });
+    res.json({ casino: { id: casino.id, name: casino.name, theme: casino.theme, reputation: casino.reputation, level: casino.level, totalVisitors: casino.totalVisitors, reviewAverage: casino.reviewAverage, reviewCount: casino.reviewCount, owner: casino.owner.username, staffCount: casino.staff.length, assets: casino.assets.map((a: any) => a.name) } });
+  });
+
+  r.post('/casinos/:id/visit', async (req: any, res) => {
+    const updated = await prisma.casino.updateMany({ where: { id: req.params.id }, data: { totalVisitors: { increment: 1 } } });
+    if (!updated.count) return res.status(404).json({ error: 'Cassino não encontrado.' });
+    res.json({ message: 'Visita registrada no mundo virtual.' });
+  });
+
+  r.post('/casinos/:id/simulate-day', async (req: any, res) => {
+    const userId = req.userId as string;
+    const casino = await prisma.casino.findFirst({ where: { id: req.params.id, ownerId: userId }, include: { staff: true, assets: true } });
+    if (!casino) return res.status(404).json({ error: 'Cassino não encontrado.' });
+    const skill = casino.staff.reduce((sum: number, member: any) => sum + member.skill, 0);
+    const visitors = Math.max(10, 20 + casino.reputation * 2 + skill * 5 + casino.assets.length * 3);
+    const dailyRevenue = BigInt(visitors * 30);
+    const rating = Math.min(5, Math.max(3, 3.2 + casino.reputation / 60 + Math.min(skill, 10) / 20));
+    const reviewAverage = Number(((casino.reviewAverage * casino.reviewCount + rating) / (casino.reviewCount + 1)).toFixed(2));
+    const updated = await prisma.casino.update({ where: { id: casino.id }, data: { totalVisitors: { increment: visitors }, monthlyRevenue: { increment: dailyRevenue }, reputation: Math.min(100, casino.reputation + (rating >= 4.5 ? 2 : 1)), reviewAverage, reviewCount: { increment: 1 } } });
+    res.json({ casino: { id: updated.id, totalVisitors: updated.totalVisitors, monthlyRevenue: Number(updated.monthlyRevenue), reputation: updated.reputation, reviewAverage: updated.reviewAverage, reviewCount: updated.reviewCount }, simulation: { visitors, dailyRevenue: Number(dailyRevenue), rating }, message: 'Dia simulado com clientes e avaliações fictícias.' });
+  });
+
   app.use('/api/empire', r);
 }
