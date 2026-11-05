@@ -42,6 +42,13 @@ model User {
   courseAccess CourseEntitlement[]
   courseProgress CourseProgress[]
   coursePayments CoursePayment[]
+  empireWallet EmpireWallet?
+  empireLedger EmpireLedger[]
+  handRewards WorldHandReward[]
+  casinos Casino[]
+  casinoStaff CasinoStaff[]
+  empireAssets EmpireAsset[]
+  marketListings MarketListing[]
 }
 
 model DemoWallet {
