@@ -37,3 +37,21 @@ test('plays a heads-up hand through all streets and conserves chips',()=>{
  assert.equal(t.street,'COMPLETE');assert.equal(t.pot,0);
  assert.equal(t.players.reduce((sum,p)=>sum+p.stack,0),1000);
 });
+
+test('awards the pot to the bot when the human folds',()=>{
+ const t=createTable({id:'fold-test',name:'fold test',smallBlind:5,bigBlind:10,maxPlayers:2});
+ sitDown(t,{id:'human',username:'human',stack:500});sitDown(t,{id:'bot',username:'bot',stack:500});
+ startHand(t);
+ act(t,'human','FOLD');
+ assert.equal(t.street,'COMPLETE');
+ assert.equal(t.winners.length,1);
+ assert.equal(t.winners[0].playerId,'bot');
+ assert.equal(t.winners[0].amount,15);
+ assert.equal(t.players.reduce((sum,p)=>sum+p.stack,0),1000);
+});
+test('rejects an action from the player who is not acting',()=>{
+ const t=createTable({id:'turn-test',name:'turn test',smallBlind:5,bigBlind:10,maxPlayers:2});
+ sitDown(t,{id:'human',username:'human',stack:500});sitDown(t,{id:'bot',username:'bot',stack:500});
+ startHand(t);
+ assert.throws(()=>act(t,'bot','CHECK'),/NOT_YOUR_TURN/);
+});
