@@ -1,0 +1,30 @@
+name: Verify Poker House Empire
+on:
+  pull_request:
+    paths:
+      - 'pokerhouse-v6-preparado/**'
+      - '.github/workflows/verify-empire.yml'
+  push:
+    branches:
+      - 'feature/império-cassino-mvp'
+    paths:
+      - 'pokerhouse-v6-preparado/**'
+      - '.github/workflows/verify-empire.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pokerhouse-v6-preparado
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pokerhouse_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx prisma validate --schema prisma/schema.prisma
+      - run: npx prisma generate --schema prisma/schema.prisma
+      - run: npm run build
+      - run: npm test --workspace @poker-house/api
