@@ -15,10 +15,21 @@ import { registerEmpireExtraRoutes } from './empire-extra.js';
 const app = express();
 const server = createServer(app);
 const prisma = new PrismaClient();
-const origins = (process.env.CLIENT_ORIGIN ?? 'http://localhost:5173').split(',').map(x => x.trim());
+const isProduction = process.env.NODE_ENV === 'production';
+const configuredOrigins = process.env.CLIENT_ORIGIN;
+if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
+  throw new Error('JWT_SECRET must be configured with at least 32 characters in production.');
+}
+if (isProduction && !configuredOrigins) {
+  throw new Error('CLIENT_ORIGIN must be configured in production.');
+}
+const origins = (configuredOrigins ?? 'http://localhost:5173').split(',').map(x => x.trim()).filter(Boolean);
 const secret = process.env.JWT_SECRET ?? 'DEV_ONLY_CHANGE_THIS_SECRET_BEFORE_DEPLOY';
 app.use(helmet());
-app.use(cors({ origin: true }));
+app.use(cors({ origin: (origin, callback) => {
+  if (!origin || origins.includes(origin)) return callback(null, true);
+  return callback(new Error('Origin not allowed by CORS'));
+} }));
 app.use(express.json({ limit: '20kb' }));
 
 type AuthRequest = Request & { userId?: string };
@@ -74,14 +85,21 @@ app.get('/api/wallet/history', auth, async (req:AuthRequest,res) => {
 
 app.post('/api/rewards/claim', auth, async (req:AuthRequest,res) => {
   const start = new Date(); start.setHours(0,0,0,0);
-  const prior = await prisma.demoChipTransaction.findFirst({where:{userId:req.userId,type:'DAILY_REWARD',createdAt:{gte:start}}});
-  if (prior) return res.status(409).json({error:'Recompensa diária já resgatada.'});
-  const result = await prisma.$transaction(async tx => {
-    await tx.demoWallet.update({where:{userId:req.userId!},data:{balance:{increment:500n}}});
-    await tx.demoChipTransaction.create({data:{userId:req.userId!,type:'DAILY_REWARD',amount:500n,description:'Recompensa diária fictícia'}});
-    return tx.demoWallet.findUnique({where:{userId:req.userId!}});
-  });
-  res.json({balance:Number(result?.balance ?? 0),message:'500 fichas fictícias adicionadas.'});
+  try {
+    const result = await prisma.$transaction(async tx => {
+      const prior = await tx.demoChipTransaction.findFirst({where:{userId:req.userId,type:'DAILY_REWARD',createdAt:{gte:start}}});
+      if (prior) throw new Error('ALREADY_CLAIMED');
+      await tx.demoWallet.update({where:{userId:req.userId!},data:{balance:{increment:500n}}});
+      await tx.demoChipTransaction.create({data:{userId:req.userId!,type:'DAILY_REWARD',amount:500n,description:'Recompensa diária fictícia'}});
+      return tx.demoWallet.findUnique({where:{userId:req.userId!}});
+    }, { isolationLevel: 'Serializable' });
+    res.json({balance:Number(result?.balance ?? 0),message:'500 fichas fictícias adicionadas.'});
+  } catch (e:any) {
+    if (e?.message === 'ALREADY_CLAIMED' || e?.code === 'P2034') {
+      return res.status(409).json({error:'Recompensa diária já resgatada.'});
+    }
+    return res.status(500).json({error:'Não foi possível resgatar a recompensa diária.'});
+  }
 });
 
 
@@ -224,7 +242,10 @@ app.post('/api/admin/store/items', auth, async (req:AuthRequest,res) => {
   res.status(201).json({item});
 });
 
-const io = new Server(server,{cors:{origin:origins}});
+const io = new Server(server,{cors:{origin: (origin, callback) => {
+  if (!origin || origins.includes(origin)) return callback(null, true);
+  return callback(new Error('Origin not allowed by CORS'));
+}}});
 const liveTables = new Map<string,TableState>();
 async function persistGame(game:TableState){
   await prisma.pokerGameSnapshot.upsert({
@@ -282,7 +303,13 @@ io.on('connection',socket=>{
       let game=liveTables.get(tableId);
       if(!game){game=createTable({id:dbTable.id,name:dbTable.name,smallBlind:dbTable.smallBlind,bigBlind:dbTable.bigBlind,maxPlayers:dbTable.maxPlayers});liveTables.set(tableId,game);}
       if(game.players.some(p=>p.id===user.id)){
-        socket.join(`table:${tableId}`);socket.emit('table:state',publicState(game,user.id));return;
+        socket.join(`table:${tableId}`);
+        socket.emit('table:state',publicState(game,user.id));
+        const own=game.players.find(p=>p.id===user.id);
+        if(own && ['PREFLOP','FLOP','TURN','RIVER'].includes(game.street)) socket.emit('table:private-cards',{cards:own.hole});
+        const current=game.players.find(p=>p.seat===game.currentSeat);
+        if(current) socket.emit('table:turn',{playerId:current.id,actions:legalActions(game,current.id)});
+        return;
       }
       const buyIn=Math.min(Number(user.wallet.balance),dbTable.buyIn);
       if(buyIn<dbTable.bigBlind*2)throw new Error('Saldo insuficiente para sentar nesta mesa.');
@@ -337,7 +364,13 @@ io.on('connection',socket=>{
     }catch(e:any){socket.emit('table:error',{message:e.message||'Ação inválida.'});}
   });
   socket.on('table:request-state',(tableId:string)=>{
-    const game=liveTables.get(tableId);if(game)socket.emit('table:state',publicState(game,socket.data.userId));
+    const game=liveTables.get(tableId);
+    if(!game)return;
+    socket.emit('table:state',publicState(game,socket.data.userId));
+    const own=game.players.find(p=>p.id===socket.data.userId);
+    if(own && ['PREFLOP','FLOP','TURN','RIVER'].includes(game.street)) socket.emit('table:private-cards',{cards:own.hole});
+    const current=game.players.find(p=>p.seat===game.currentSeat);
+    if(current) socket.emit('table:turn',{playerId:current.id,actions:legalActions(game,current.id)});
   });
 });
 const port = Number(process.env.PORT ?? 3001);
