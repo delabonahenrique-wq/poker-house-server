@@ -44,6 +44,21 @@ jobs:
         run: npx cap add android
         working-directory: pokerhouse-v6-preparado/apps/web
 
+      - name: Apply official Poker House launcher icon
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          RES="android/app/src/main/res"
+          rm -rf "$RES/mipmap-anydpi-v26"
+          for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+            density="${spec%%:*}"
+            pixels="${spec##*:}"
+            mkdir -p "$RES/mipmap-$density"
+            rsvg-convert -w "$pixels" -h "$pixels" public/icon.svg > "$RES/mipmap-$density/ic_launcher.png"
+            cp "$RES/mipmap-$density/ic_launcher.png" "$RES/mipmap-$density/ic_launcher_round.png"
+          done
+        working-directory: pokerhouse-v6-preparado/apps/web
+
       - name: Sync Android
         run: npx cap sync android
         working-directory: pokerhouse-v6-preparado/apps/web
