@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://prime-studio-4lbx.onrender.com/sitemap.xml
