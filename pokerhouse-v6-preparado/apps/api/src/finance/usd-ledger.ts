@@ -34,7 +34,7 @@ export function assertRealMoneyDisabled(feature: keyof typeof REAL_MONEY_FEATURE
 
 /** Parse a decimal USD string without floating-point arithmetic. */
 export function parseUsdMinor(value: string): bigint {
-  if (typeof value !== 'string' || !/^(0|[1-9]\\d*)(?:\\.(\\d{1,2}))?$/.test(value)) {
+  if (typeof value !== 'string' || !/^(0|[1-9]\d*)(?:\\.(\d{1,2}))?$/.test(value)) {
     throw new Error('INVALID_USD_AMOUNT');
   }
   const [whole, fraction = ''] = value.split('.');
