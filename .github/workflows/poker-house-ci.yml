@@ -1,0 +1,29 @@
+name: Poker House CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feature/desktop-lobby-zoom-mode]
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pokerhouse-v6-preparado
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pokerhouse-v6-preparado/package-lock.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema prisma/schema.prisma
+      - name: Run API tests
+        run: npm run test --workspace @poker-house/api
+      - name: Build web and API
+        run: npm run build
