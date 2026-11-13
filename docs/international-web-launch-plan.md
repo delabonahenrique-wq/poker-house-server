@@ -57,9 +57,9 @@ Projetar a plataforma para receber jogadores de diferentes países, sem presumir
 
 ## Limites legais e de segurança
 
-“Internacional” significa arquitetura preparada para usuários de vários países, não autorização automática para operar em todos eles. A primeira versão usa somente fichas virtuais sem valor monetário, sem depósitos, saques, transferências ou prêmios em dinheiro. Antes de habilitar qualquer recurso de dinheiro real, apostas com valor econômico ou prêmio resgatável, exigir análise jurídica, licenças e controles aplicáveis em cada jurisdição. Aplicar bloqueios geográficos quando exigido.
+“Internacional” significa arquitetura preparada para usuários de vários países, não autorização automática para operar em todos eles. A primeira versão de desenvolvimento usa somente fichas virtuais sem valor monetário, sem depósitos, saques, transferências ou prêmios em dinheiro. A arquitetura deve prever uma futura carteira financeira exclusivamente em USD, com conversão feita por provedor contratado, livro-razão auditável, compliance e integração financeira por adaptador. Todos os recursos de dinheiro real permanecem desativados até análise jurídica escrita, licenças/autorizações e controles aplicáveis em cada jurisdição. Aplicar bloqueios geográficos por padrão.
 
-## Plano de entrega — web primeiro
+## Preparação futura para dinheiro real em USD\n\nA especificação financeira está em [real-money-usd-readiness-plan.md](real-money-usd-readiness-plan.md). Ela é planejamento técnico, não autorização para operar. Depósitos, cash games com dinheiro real, prêmios resgatáveis, transferências e saques ficam bloqueados por padrão. A moeda única da futura carteira será USD; a conversão da moeda de origem será feita pelo provedor financeiro aprovado, e a Poker House creditará somente USD efetivamente liquidado.\n\n## Plano de entrega — web primeiro
 
 ### Etapa 1 — Base do site
 - Corrigir e validar a estrutura do frontend web existente.
