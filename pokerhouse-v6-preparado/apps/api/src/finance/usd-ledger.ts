@@ -47,7 +47,7 @@ export function formatUsdMinor(amountMinor: bigint): string {
   if (amountMinor < 0n) throw new Error('INVALID_USD_AMOUNT');
   const whole = amountMinor / 100n;
   const cents = (amountMinor % 100n).toString().padStart(2, '0');
-  return '
+  return '$' + whole.toString() + '.' + cents;
 }
 
 /** Validates a double-entry draft; performs no database writes. */
