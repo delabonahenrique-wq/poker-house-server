@@ -39,7 +39,7 @@ test('rejects unbalanced, non-USD, and non-positive ledger entries', () => {
     { accountId:'b', direction:'CREDIT', amountMinor:99n, currency:'USD' }
   ]), /NOT_BALANCED/);
   assert.throws(() => validateBalancedUsdDraft([
-    { accountId:'a', direction:'DEBIT', amountMinor:100n, currency:'BRL' as 'USD' },
+    { accountId:'a', direction:'DEBIT', amountMinor:100n, currency:'BRL' as any },
     { accountId:'b', direction:'CREDIT', amountMinor:100n, currency:'USD' }
   ]), /USD_ONLY/);
   assert.throws(() => validateBalancedUsdDraft([
