@@ -15,11 +15,15 @@ Evoluir o Poker House para uma experiência desktop de poker, com lobby completo
 - O motor documenta limitações relevantes: estado de mesa em memória, falta de reconexão/timeout de ação e falta de reconciliação atômica de stacks com carteiras.
 - O produto atual declara fichas exclusivamente fictícias, sem saque, transferência ou valor monetário.
 
+## Escopo enxuto: motor, jogadores e mesa
+
+O produto desta etapa não terá Império, construção de cassino, economia paralela ou recursos decorativos. O trabalho se concentra no motor de poker, matchmaking, gestão de assentos/sessões e interface de jogo.
+
 ## Experiência desktop proposta
 
 ### Estrutura geral do cliente
 
-- Layout otimizado para desktop a partir de 1280 px, responsivo para tablet e mobile.
+- Layout responsivo com prioridade equivalente para PC e celular: mesa ampla no desktop e controles grandes/tocáveis no celular.
 - Barra superior: marca Poker House, pesquisa, status de conexão, notificações, saldo fictício e perfil.
 - Navegação lateral:
   - Lobby
@@ -30,13 +34,15 @@ Evoluir o Poker House para uma experiência desktop de poker, com lobby completo
   - Carteira
   - Autoavaliação
   - Academy
-  - Império
   - Perfil / Ajustes
-- Área central do lobby com abas, filtros, busca, ordenação e tabela de jogos.
+- Área central do lobby com filtros, busca, ordenação e lista/tabela de jogos.
+- Remover a seção Império de toda navegação e tela. Não criar moeda secundária, construção de cassino ou marketplace nesta etapa.
 - Painel lateral opcional com notícias do clube, eventos e atividade.
-- Clique em Jogar abre uma tela de mesa dedicada, não apenas um bloco dentro do lobby.
+- Clique em Jogar abre uma rota/tela dedicada de mesa, separada do lobby, mantendo a sessão ativa ao alternar entre as telas.
+- No celular, usar layout adaptável, cartas e stacks legíveis, botões Fold/Check/Call/Bet/Raise/All-in grandes e posicionados para toque.
+- No PC, ocupar a área útil com mesa central ampla, assentos bem distribuídos, painel de ações e histórico sem sobreposição.
 - Controles da mesa: minimizar, maximizar, tela cheia, sair, histórico de mãos e preferências visuais.
-- Multimesas com abas/janelas internas e opção de mosaico; limitar a quantidade conforme desempenho e legibilidade.
+- Multimesas somente depois que uma mesa única estiver estável; não sacrificar legibilidade nem desempenho.
 - Identidade Poker House: fundo onyx, feltro verde, dourado e componentes próprios; não reproduzir a skin ou os ícones exclusivos de terceiros.
 
 ### Lobby
@@ -108,6 +114,10 @@ Filtros:
 - Layout de mesa compacto / confortável.
 - Preferências persistidas por usuário.
 
+## Histórico e dados de jogo
+
+Manter histórico de mãos e decisões com dados reais do servidor. Qualquer painel de estatísticas será secundário ao funcionamento correto do motor, das sessões e do matchmaking.
+
 ## Autoavaliação
 
 Registrar cada decisão e mão com dados reais do servidor:
@@ -124,33 +134,33 @@ Registrar cada decisão e mão com dados reais do servidor:
 - Confirmar o build atual e manter a branch main intocada.
 - Documentar contratos Socket.IO e modelos Prisma.
 
-### Fase 1 — Desktop lobby e navegação
+### Fase 1 — Lobby e tela de mesa responsiva
 - Criar shell desktop responsivo.
 - Implementar lobby em tabela, filtros e pesquisa.
 - Criar rota/tela dedicada de mesa e controles de janela/tela cheia.
-- Preservar carteira fictícia, Academy, Autoavaliação e Império na navegação.
+- Manter somente as áreas essenciais ao jogo: Lobby, mesas, Rush/Fast Fold, carteira fictícia, histórico e perfil/configurações. Academy e recursos paralelos ficam fora do escopo desta etapa.
 
-### Fase 2 — Mesa desktop
+### Fase 2 — Motor da mesa e ciclo de jogadores
 - Refatorar a mesa para componente dedicado.
 - Implementar histórico, relógio de ação, slider de apostas e layouts.
 - Garantir que os eventos de entrada/saída e reconexão sejam consistentes.
 
-### Fase 3 — Backend de pool Fast Fold
+### Fase 3 — Backend de pool Fast Fold e matchmaking
 - Adicionar entidades de pool, fila, sessões e assentos temporários no Prisma.
 - Criar serviços server-side de matchmaking e alocação atômica.
 - Adicionar eventos Socket.IO específicos para entrar no pool, fast-fold, próximo assento e status de fila.
 - Persistir estado e resolver recuperação de sessão.
 
-### Fase 4 — Rush UX
+### Fase 4 — Experiência Rush/Fast Fold
 - Criar aba Rush no lobby.
 - Adicionar Fast Fold, animações de troca, feedback de fila e histórico de mãos.
 - Implementar suporte inicial a uma mesa por jogador; multimesas rápidas depois de estabilizar.
 
-### Fase 5 — Qualidade e lançamento
+### Fase 5 — Testes de integridade e lançamento
 - Testes unitários e integração com jogadores simultâneos.
 - Testes de carga e reconexão.
 - Auditoria de integridade do motor e da carteira fictícia.
-- Build web desktop e APK Android responsivo.
+- Validar a mesma mesa responsiva em navegadores desktop e Android; gerar APK somente após testes.
 - Deploy de staging; só depois de aprovação, PR para main.
 
 ## Critérios de aceite
