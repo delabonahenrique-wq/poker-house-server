@@ -14,7 +14,7 @@ export function assertRealMoneyDisabled(feature: keyof typeof REAL_MONEY_FEATURE
 }
 
 export function parseUsdMinor(value: string): bigint {
-  if (typeof value !== 'string' || !/^(0|[1-9]\\d*)(?:\\.(\\d{1,2}))?$/.test(value)) throw new Error('INVALID_USD_AMOUNT');
+  if (typeof value !== 'string' || !/^(0|[1-9]\d*)(?:\.(\d{1,2}))?$/.test(value)) throw new Error('INVALID_USD_AMOUNT');
   const [whole, fraction = ''] = value.split('.');
   const minor = BigInt(whole) * 100n + BigInt((fraction + '00').slice(0, 2));
   if (minor <= 0n) throw new Error('USD_AMOUNT_MUST_BE_POSITIVE');
