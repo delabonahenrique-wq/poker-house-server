@@ -47,7 +47,25 @@ export function formatUsdMinor(amountMinor: bigint): string {
   if (amountMinor < 0n) throw new Error('INVALID_USD_AMOUNT');
   const whole = amountMinor / 100n;
   const cents = (amountMinor % 100n).toString().padStart(2, '0');
-  return \`$\${whole.toString()}.\${cents}\`;
+  return '
+}
+
+/** Validates a double-entry draft; performs no database writes. */
+export function validateBalancedUsdDraft(entries: LedgerEntryInput[]): BalancedLedgerDraft {
+  if (!Array.isArray(entries) || entries.length < 2) throw new Error('LEDGER_REQUIRES_TWO_ENTRIES');
+  let debits = 0n;
+  let credits = 0n;
+  for (const entry of entries) {
+    if (!entry.accountId || entry.currency !== 'USD') throw new Error('USD_ONLY_LEDGER');
+    if (typeof entry.amountMinor !== 'bigint' || entry.amountMinor <= 0n) throw new Error('INVALID_LEDGER_AMOUNT');
+    if (entry.direction === 'DEBIT') debits += entry.amountMinor;
+    else if (entry.direction === 'CREDIT') credits += entry.amountMinor;
+    else throw new Error('INVALID_LEDGER_DIRECTION');
+  }
+  if (debits !== credits) throw new Error('LEDGER_NOT_BALANCED');
+  return { currency: 'USD', entries: entries.map(entry => ({ ...entry })), totalMinor: debits };
+}
+ + whole.toString() + '.' + cents;
 }
 
 /** Validates a double-entry draft; performs no database writes. */
