@@ -6,8 +6,9 @@ Evoluir o Poker House para uma experiência desktop de poker, com lobby completo
 
 ## Estado atual observado na main
 
-- Frontend: React 18 + TypeScript + Vite, em `apps/web`.
-- Backend: Node.js + Express + Socket.IO, em `apps/api`.
+- O código do produto está dentro de `pokerhouse-v6-preparado/`.
+- Frontend: React 18 + TypeScript + Vite, em `pokerhouse-v6-preparado/apps/web`.
+- Backend: Node.js + Express + Socket.IO, em `pokerhouse-v6-preparado/apps/api`.
 - Persistência: PostgreSQL + Prisma.
 - O lobby atual lista mesas cash e torneios em cartões.
 - A mesa é renderizada dentro da aba Lobby; ainda não há janela/rota dedicada para mesa.
@@ -179,6 +180,9 @@ Registrar cada decisão e mão com dados reais do servidor:
 ## Limitações e dependências atuais
 
 O motor atual é uma primeira versão e o README já registra que o estado é em memória, que stacks ainda não são reconciliados atomicamente com a carteira persistida e que faltam reconexão e timeout de ação. O modo Rush não deve ser lançado antes de resolver essas limitações, porque o Fast Fold depende de realocação confiável e concorrente de jogadores.
+
+## Escopo internacional e web-first
+A primeira entrega é somente o site, acessível pelo navegador em computadores e celulares. Preparar internacionalização (português inicial, inglês e espanhol previstos), formatação por locale/fuso horário, suporte e políticas localizadas. Disponibilidade por país será configurável e sujeita a revisão legal; fichas continuam fictícias. O aplicativo instalável fica para uma fase posterior.
 
 ## Referência funcional
 
